@@ -81,7 +81,7 @@ header {
 .card img {
     width: 100%;
     height: auto;
-    border-radius: 16px;
+    border-radius: 16px 16px 0 0;
     flex-shrink: 0;
     display: block;
 }
@@ -94,6 +94,7 @@ header {
 .listing_heading {
     display: flex;
     margin-top: 1em;
+    cursor: pointer;
 }
 
 .heading_right {
@@ -149,6 +150,78 @@ header {
     background-color: #7572FF;
     color: #fff;
 }
+
+/* MODAL */
+.modal.hidden { display: none; }
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+}
+
+.modal_overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+}
+
+.modal_content {
+    position: relative;
+    background: #fff;
+    max-width: 900px;
+    width: 90%;
+    margin: 5vh auto;
+    border-radius: 12px;
+    padding: 0 16px;
+}
+
+.modal_image {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.modal_details {
+    position: relative;
+}
+
+.modal_details .bottom_specs {
+    display: flex;
+    flex-direction: column;
+    background-color: #00000080;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 8px 18px;
+    box-sizing: border-box;
+}
+
+.modal_details .bottom_specs h3 {
+    background: none;
+    padding: 3px 0;
+}
+
+.modal_slider {
+    display: flex;
+    overflow-x: auto;
+    margin-bottom: -16px;
+}
+
+.modal_slider .image_slider {
+    display: flex;
+    gap: 1rem;
+    cursor: w-resize;
+}
+
+.modal_slider img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.modal_close { margin: 8px; }
 
 /* MOBILE DISPLAY */
 @media only screen and (max-width: 480px) {

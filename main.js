@@ -235,6 +235,7 @@ document.getElementById('cards').addEventListener('click', (e) => {
     if (!body) return;
     const card = body.closest('.card');
     if (!card) return;
+    openVehicleModal(card);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -278,4 +279,37 @@ document.addEventListener('DOMContentLoaded', () => {
         setStarredIds(stored);
         applyStarState();
     });
+});
+
+function openVehicleModal(card) {
+    const modal = document.getElementById('vehicleModal');
+    const sliderHost = modal.querySelector('.modal_slider');
+    const details = modal.querySelector('.modal_details');
+    const h3 = card.querySelector('.heading_left h3');
+
+    sliderHost.innerHTML = '';
+
+    const originalSlider = card.querySelector('.image_slider');
+    if (originalSlider) {
+        const clonedSlider = originalSlider.cloneNode(true);
+        clonedSlider.style.transform = 'translateX(0)';
+        sliderHost.append(clonedSlider);
+    }
+
+    details.innerHTML = `
+        ${card.querySelector('.specs-grid')?.outerHTML || ''}
+    `;
+
+    const bottomSpecs = details.querySelector('.bottom_specs');
+    if (h3 && bottomSpecs) bottomSpecs.prepend(h3.cloneNode(true));
+
+    modal.classList.remove('hidden');
+}
+
+const modal = document.getElementById('vehicleModal');
+
+modal.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal_overlay') || e.target.classList.contains('modal_close')) {
+        modal.classList.add('hidden');
+    }
 });
