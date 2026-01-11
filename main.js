@@ -1,3 +1,5 @@
+import { MAIN_URL } from './config.js';
+
 const isApple = /iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 const isAndroid = /Android/i.test(navigator.userAgent);
 const isMobile = isApple || isAndroid;
@@ -5,7 +7,7 @@ const isTablet = (isAndroid && window.innerWidth >= 768 && window.innerWidth <= 
 const isDesktop = /Windows/i.test(navigator.userAgent);
 
 const type = "vehicles";
-const page = 1;
+let currentPage = 1;
 
 const advert_classification = "all";
 
@@ -33,9 +35,11 @@ let vehiclesToDisplay = [];
 let currentFilter = "All";
 let currentOrder = null;
 
-let currentSrc = "";
-
 function renderCards(param = currentFilter, order = currentOrder) {
+    if (param !== currentFilter || order !== currentOrder) {
+        currentPage = 1;
+    }
+
     currentFilter = param;
     currentOrder = order;
     cardsDiv.innerHTML = "";
@@ -45,32 +49,42 @@ function renderCards(param = currentFilter, order = currentOrder) {
         vehicles = vehicles.filter(vehicle => vehicle.advert_classification === param);
     }
 
-    switch (order) {
-        case 'price-desc':
-            vehicles.sort((a, b) => b.price - a.price);
-            break;
+    if (order) {
+        switch (order) {
+            case 'price-desc':
+                vehicles.sort((a, b) => b.price - a.price);
+                break;
 
-        case 'price-asc':
-            vehicles.sort((a, b) => a.price - b.price);
-            break;
+            case 'price-asc':
+                vehicles.sort((a, b) => a.price - b.price);
+                break;
 
-        case 'favoured-first': {
-            const starredIds = JSON.parse(localStorage.getItem('starred_items')) || [];
-            vehicles.sort((a, b) => {
-                const aFav = starredIds.includes(String(a.stock_id));
-                const bFav = starredIds.includes(String(b.stock_id));
-                if (aFav === bFav) return 0;
-                return aFav ? -1 : 1;
-            });
-            break;
+            case 'favoured-first': {
+                if (currentPage === 1) {
+                    const starredIds = JSON.parse(localStorage.getItem('starred_items')) || [];
+                    vehicles.sort((a, b) => {
+                        const aFav = starredIds.includes(String(a.stock_id));
+                        const bFav = starredIds.includes(String(b.stock_id));
+                        if (aFav === bFav) return 0;
+                        return aFav ? -1 : 1;
+                    });
+                    break;
+                }
+            }
+            default:
+                break;
         }
-
-        default:
-            break;
     }
 
-    const visibleVehicles = vehicles.slice(page, page + meta.per_page);
+    const totalFiltered = meta.total || vehicles.length;
+    const perPage = meta.per_page || 11;
+    const lastPage = meta.last_page || 1;
 
+    console.log('[renderCards] totalFiltered:', totalFiltered, 'perPage:', perPage, 'lastPage:', lastPage);
+
+
+    const visibleVehicles = vehicles;
+    
     if (visibleVehicles.length === 0) {
         cardsDiv.innerHTML = `
             <div class="no-results">
@@ -192,10 +206,11 @@ function renderCards(param = currentFilter, order = currentOrder) {
     });
 
     results.innerHTML = `
-        Showing ${visibleVehicles.length} of ${vehicles.length} cars
+        Showing ${visibleVehicles.length} of ${totalFiltered} cars
     `;
 
     applyStarState();
+    renderPaginator(lastPage);
 }
 
 // -------------------- STARS --------------------
@@ -239,27 +254,24 @@ document.getElementById('cards').addEventListener('click', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    const mainURL = "https://m6zhmj6dggvrmepfanilteq4q40rlalu.lambda-url.eu-west-1.on.aws";
-
-    fetch(`${mainURL}/vehicles?page=${page}&results_per_page=8&advert_classification=${currentFilter}`)
-        .then(res => res.json())
-        .then(data => {
-            meta = data.meta;
-            vehiclesToDisplay = data.data.slice(0, meta.per_page);
-            renderCards("All");
-        });
+    fetchVehicles();
 
     nav.addEventListener('click', (e) => {
         const btn = e.target.closest('.filter');
         if (!btn) return;
-
+    
         nav.querySelectorAll('.filter').forEach(el => el.classList.remove('selected'));
         btn.classList.add("selected");
-
-        renderCards(btn.dataset.type);
+    
+        currentFilter = btn.dataset.type;
+        currentPage = 1;
+    
+        fetchVehicles(currentFilter, currentPage);
     });
+    
 
     filter_options.addEventListener("change", (e) => {
+        currentPage = 1;
         renderCards(currentFilter, e.target.value);
     });
 
@@ -279,6 +291,110 @@ document.addEventListener('DOMContentLoaded', () => {
         setStarredIds(stored);
         applyStarState();
     });
+});
+
+function fetchVehicles(filter = currentFilter, page = currentPage) {
+    const perPage = meta.per_page || 11;
+
+    fetch(`${MAIN_URL}/vehicles?page=${page}&results_per_page=${perPage}&advert_classification=${filter}`)
+        .then(res => res.json())
+        .then(data => {
+            meta = data.meta;
+            vehiclesToDisplay = data.data;
+            currentFilter = filter;
+            currentPage = page;
+
+            console.log('[fetchVehicles] URL:', `${MAIN_URL}/vehicles?page=${page}&results_per_page=${perPage}&advert_classification=${filter}`);
+            console.log('[fetchVehicles] meta:', meta);
+
+            renderCards(currentFilter, currentOrder);
+        });
+}
+
+function renderPaginatorFor(hostId, leftId, rightId, lastPage) {
+    const pagesHost = document.getElementById(hostId);
+    pagesHost.innerHTML = '';
+
+    if (!lastPage) return;
+
+    const windowSize = 5;
+    const half = Math.floor(windowSize / 2);
+
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(lastPage, start + windowSize - 1);
+
+    if (end - start < windowSize - 1) {
+        start = Math.max(1, end - windowSize + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'paginator';
+        btn.textContent = i;
+
+        if (i === currentPage) btn.classList.add('selected');
+
+        btn.addEventListener('click', () => {
+            currentPage = i;
+            fetchVehicles(currentFilter, currentPage);
+        });
+
+        pagesHost.appendChild(btn);
+    }
+
+    const btnLeft = document.getElementById(leftId);
+    const btnRight = document.getElementById(rightId);
+
+    if (currentPage <= 1) btnLeft.classList.add('disabled');
+    else btnLeft.classList.remove('disabled');
+
+    if (currentPage >= lastPage) btnRight.classList.add('disabled');
+    else btnRight.classList.remove('disabled');
+}
+
+function renderPaginator(filteredLastPage) {
+    const lastPage = filteredLastPage || meta.last_page;
+
+    renderPaginatorFor('pages', 'left', 'right', lastPage);
+    renderPaginatorFor('pages-top', 'left-top', 'right-top', lastPage);
+}
+
+document.getElementById('left').addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        fetchVehicles(currentFilter, currentPage);
+    }
+});
+
+document.getElementById('right').addEventListener('click', () => {
+    if (currentPage < meta.last_page) {
+        currentPage++;
+        fetchVehicles(currentFilter, currentPage);
+    }
+});
+
+document.getElementById('end').addEventListener('click', () => {
+    currentPage = meta.last_page;
+    fetchVehicles(currentFilter, currentPage);
+});
+
+document.getElementById('left-top')?.addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        fetchVehicles(currentFilter, currentPage);
+    }
+});
+
+document.getElementById('right-top')?.addEventListener('click', () => {
+    if (currentPage < meta.last_page) {
+        currentPage++;
+        fetchVehicles(currentFilter, currentPage);
+    }
+});
+
+document.getElementById('end-top')?.addEventListener('click', () => {
+    currentPage = meta.last_page;
+    fetchVehicles(currentFilter, currentPage);
 });
 
 function openVehicleModal(card) {
