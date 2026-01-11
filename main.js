@@ -84,7 +84,7 @@ function renderCards(param = currentFilter, order = currentOrder) {
 
 
     const visibleVehicles = vehicles;
-    
+
     if (visibleVehicles.length === 0) {
         cardsDiv.innerHTML = `
             <div class="no-results">
@@ -259,16 +259,16 @@ document.addEventListener('DOMContentLoaded', () => {
     nav.addEventListener('click', (e) => {
         const btn = e.target.closest('.filter');
         if (!btn) return;
-    
+
         nav.querySelectorAll('.filter').forEach(el => el.classList.remove('selected'));
         btn.classList.add("selected");
-    
+
         currentFilter = btn.dataset.type;
         currentPage = 1;
-    
+
         fetchVehicles(currentFilter, currentPage);
     });
-    
+
 
     filter_options.addEventListener("change", (e) => {
         currentPage = 1;
@@ -312,44 +312,64 @@ function fetchVehicles(filter = currentFilter, page = currentPage) {
 }
 
 function renderPaginatorFor(hostId, leftId, rightId, lastPage) {
-    const pagesHost = document.getElementById(hostId);
-    pagesHost.innerHTML = '';
+    const host = document.getElementById(hostId);
+    host.innerHTML = '';
 
-    if (!lastPage) return;
+    if (!lastPage || lastPage < 1) return;
 
-    const windowSize = 5;
-    const half = Math.floor(windowSize / 2);
+    const makeBtn = (label, page, disabled = false, selected = false) => {
+        const btn = document.createElement('div');
+        btn.className = 'paginator';
+        btn.textContent = label;
 
-    let start = Math.max(1, currentPage - half);
-    let end = Math.min(lastPage, start + windowSize - 1);
+        if (disabled) btn.classList.add('disabled');
+        if (selected) btn.classList.add('selected');
 
-    if (end - start < windowSize - 1) {
-        start = Math.max(1, end - windowSize + 1);
+        if (!disabled && page !== null) {
+            btn.addEventListener('click', () => {
+                currentPage = page;
+                fetchVehicles(currentFilter, currentPage);
+            });
+        }
+
+        return btn;
+    };
+
+    // << and <
+    host.appendChild(
+        makeBtn('<<', 1, currentPage === 1)
+    );
+    host.appendChild(
+        makeBtn('<', currentPage - 1, currentPage === 1)
+    );
+
+    // --- PAGE WINDOW (max 3 numbers) ---
+    let start = currentPage - 1;
+    let end = currentPage + 1;
+
+    if (start < 1) {
+        start = 1;
+        end = Math.min(3, lastPage);
+    }
+
+    if (end > lastPage) {
+        end = lastPage;
+        start = Math.max(1, lastPage - 2);
     }
 
     for (let i = start; i <= end; i++) {
-        const btn = document.createElement('div');
-        btn.className = 'paginator';
-        btn.textContent = i;
-
-        if (i === currentPage) btn.classList.add('selected');
-
-        btn.addEventListener('click', () => {
-            currentPage = i;
-            fetchVehicles(currentFilter, currentPage);
-        });
-
-        pagesHost.appendChild(btn);
+        host.appendChild(
+            makeBtn(i, i, false, i === currentPage)
+        );
     }
 
-    const btnLeft = document.getElementById(leftId);
-    const btnRight = document.getElementById(rightId);
-
-    if (currentPage <= 1) btnLeft.classList.add('disabled');
-    else btnLeft.classList.remove('disabled');
-
-    if (currentPage >= lastPage) btnRight.classList.add('disabled');
-    else btnRight.classList.remove('disabled');
+    // > and >>
+    host.appendChild(
+        makeBtn('>', currentPage + 1, currentPage === lastPage)
+    );
+    host.appendChild(
+        makeBtn('>>', lastPage, currentPage === lastPage)
+    );
 }
 
 function renderPaginator(filteredLastPage) {

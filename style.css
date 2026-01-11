@@ -139,6 +139,10 @@ header {
     height: 100%;
 }
 
+.no-results {
+    margin: 16px 16px 0
+}
+
 footer {
     display: flex;
     justify-content: space-between;
@@ -158,13 +162,13 @@ footer {
 
     #pages,
     #pages-top {
-        display: flex
+        display: flex;
+        gap: 8px;
     }
 
     .paginator {
-        width: 50px;
         font-weight: 900;
-        padding: 8px;
+        padding: 8px 12px;
         border: 1px solid #D1D6E0;
         border-radius: 8px;
         text-align: center;
@@ -267,11 +271,15 @@ footer {
 /* MOBILE DISPLAY */
 @media only screen and (max-width: 480px) {
     main {
-        margin: 1em 0
+        display: block;
+        margin: 1em 0;
     }
 
-    #cards {
-        grid-template-columns: 1fr
+    #paginator-top,
+    #paginator-bottom {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
     }
 
     .card {
@@ -289,6 +297,14 @@ footer {
 
         img {
             width: calc(100% / 3.5);
+        }
+    }
+
+    footer {
+        flex-direction: column-reverse;
+
+        .paginator {
+            padding: 8px 12px;
         }
     }
 }
