@@ -6,10 +6,7 @@ const isMobile = isApple || isAndroid;
 const isTablet = (isAndroid && window.innerWidth >= 768 && window.innerWidth <= 1024) || (isApple && window.innerWidth >= 768 && window.innerWidth <= 1024);
 const isDesktop = /Windows/i.test(navigator.userAgent);
 
-const type = "vehicles";
 let currentPage = 1;
-
-const advert_classification = "all";
 
 const nav = document.getElementById("navigation");
 const filter_options = document.getElementById("filter_options");
@@ -77,12 +74,7 @@ function renderCards(param = currentFilter, order = currentOrder) {
     }
 
     const totalFiltered = meta.total || vehicles.length;
-    const perPage = meta.per_page || 11;
     const lastPage = meta.last_page || 1;
-
-    console.log('[renderCards] totalFiltered:', totalFiltered, 'perPage:', perPage, 'lastPage:', lastPage);
-
-
     const visibleVehicles = vehicles;
 
     if (visibleVehicles.length === 0) {
@@ -145,14 +137,6 @@ function renderCards(param = currentFilter, order = currentOrder) {
                 }
             })
         }
-
-        let images = [];
-
-        images.forEach(src => {
-            const vehicleImg = document.createElement("img");
-            vehicleImg.src = src;
-            image_slider.appendChild(vehicleImg);
-        });
 
         function convertedMiles() {
             if (!vehicle.odometer_value) return "N/A";
@@ -275,9 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCards(currentFilter, e.target.value);
     });
 
-    const cards = document.getElementById('cards');
-
-    cards.addEventListener('click', (e) => {
+    cardsDiv.addEventListener('click', (e) => {
         const star = e.target.closest('.star');
         if (!star) return;
 
@@ -304,14 +286,12 @@ function fetchVehicles(filter = currentFilter, page = currentPage) {
             currentFilter = filter;
             currentPage = page;
 
-            console.log('[fetchVehicles] URL:', `${MAIN_URL}/vehicles?page=${page}&results_per_page=${perPage}&advert_classification=${filter}`);
-            console.log('[fetchVehicles] meta:', meta);
-
             renderCards(currentFilter, currentOrder);
         });
 }
 
-function renderPaginatorFor(hostId, leftId, rightId, lastPage) {
+// -------------------- PAGINATOR --------------------
+function renderPaginatorFor(hostId, lastPage) {
     const host = document.getElementById(hostId);
     host.innerHTML = '';
 
@@ -325,25 +305,13 @@ function renderPaginatorFor(hostId, leftId, rightId, lastPage) {
         if (disabled) btn.classList.add('disabled');
         if (selected) btn.classList.add('selected');
 
-        if (!disabled && page !== null) {
-            btn.addEventListener('click', () => {
-                currentPage = page;
-                fetchVehicles(currentFilter, currentPage);
-            });
-        }
-
+        btn.dataset.page = page;
         return btn;
     };
 
-    // << and <
-    host.appendChild(
-        makeBtn('<<', 1, currentPage === 1)
-    );
-    host.appendChild(
-        makeBtn('<', currentPage - 1, currentPage === 1)
-    );
+    host.appendChild(makeBtn('<<', 1, currentPage === 1));
+    host.appendChild(makeBtn('<', Math.max(currentPage - 1, 1), currentPage === 1));
 
-    // --- PAGE WINDOW (max 3 numbers) ---
     let start = currentPage - 1;
     let end = currentPage + 1;
 
@@ -351,69 +319,53 @@ function renderPaginatorFor(hostId, leftId, rightId, lastPage) {
         start = 1;
         end = Math.min(3, lastPage);
     }
-
     if (end > lastPage) {
         end = lastPage;
         start = Math.max(1, lastPage - 2);
     }
 
     for (let i = start; i <= end; i++) {
-        host.appendChild(
-            makeBtn(i, i, false, i === currentPage)
-        );
+        host.appendChild(makeBtn(i, i, false, i === currentPage));
     }
 
-    // > and >>
-    host.appendChild(
-        makeBtn('>', currentPage + 1, currentPage === lastPage)
-    );
-    host.appendChild(
-        makeBtn('>>', lastPage, currentPage === lastPage)
-    );
+    host.appendChild(makeBtn('>', Math.min(currentPage + 1, lastPage), currentPage === lastPage));
+    host.appendChild(makeBtn('>>', lastPage, currentPage === lastPage));
 }
 
 function renderPaginator(filteredLastPage) {
     const lastPage = filteredLastPage || meta.last_page;
 
-    renderPaginatorFor('pages', 'left', 'right', lastPage);
-    renderPaginatorFor('pages-top', 'left-top', 'right-top', lastPage);
+    renderPaginatorFor('pages', lastPage);
+    renderPaginatorFor('pages-top', lastPage);
 }
 
-document.getElementById('left').addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchVehicles(currentFilter, currentPage);
+// -------------------- PAGINATOR BUTTON LISTENER --------------------
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.paginator');
+    if (!btn) return;
+    if (btn.classList.contains('disabled')) return;
+
+    const label = btn.textContent;
+
+    switch (label) {
+        case '<<':
+            currentPage = 1;
+            break;
+        case '<':
+            if (currentPage > 1) currentPage--;
+            break;
+        case '>':
+            if (currentPage < meta.last_page) currentPage++;
+            break;
+        case '>>':
+            currentPage = meta.last_page;
+            break;
+        default:
+            const pageNum = parseInt(label, 10);
+            if (!isNaN(pageNum)) currentPage = pageNum;
+            break;
     }
-});
 
-document.getElementById('right').addEventListener('click', () => {
-    if (currentPage < meta.last_page) {
-        currentPage++;
-        fetchVehicles(currentFilter, currentPage);
-    }
-});
-
-document.getElementById('end').addEventListener('click', () => {
-    currentPage = meta.last_page;
-    fetchVehicles(currentFilter, currentPage);
-});
-
-document.getElementById('left-top')?.addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchVehicles(currentFilter, currentPage);
-    }
-});
-
-document.getElementById('right-top')?.addEventListener('click', () => {
-    if (currentPage < meta.last_page) {
-        currentPage++;
-        fetchVehicles(currentFilter, currentPage);
-    }
-});
-
-document.getElementById('end-top')?.addEventListener('click', () => {
-    currentPage = meta.last_page;
     fetchVehicles(currentFilter, currentPage);
 });
 
